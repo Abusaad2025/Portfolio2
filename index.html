@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trader Master Pro Cloud</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg-color: #0f172a; --card-bg: #1e293b; --primary: #38bdf8; --secondary: #818cf8; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --text-main: #f1f5f9; --text-dim: #94a3b8; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .tab-btn { background: transparent; color: var(--text-dim); padding: 12px 24px; border: none; cursor: pointer; font-weight: 600; border-radius: 8px; }
+        .tab-btn.active { background: var(--primary); color: #0f172a; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .kpi-card { background: var(--card-bg); padding: 18px; border-radius: 12px; border: 1px solid var(--border); }
+        .kpi-value { font-size: 1.3rem; font-weight: 700; display: block; }
+        .main-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+        .panel { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; }
+        input { background: #0f172a; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        button { padding: 10px 15px; border-radius: 6px; cursor: pointer; border: none; font-weight: 600; }
+        .btn-primary { background: var(--primary); color: #0f172a; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <h2 id="status">Connecting to Cloud...</h2>
+    <div id="dashboard" style="display:none;">
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('portfolio')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('capital')">Capital</button>
+        </div>
+        
+        <div id="tab-portfolio" class="tab-content active">
+            <div class="kpi-grid">
+                <div class="kpi-card"><span>Equity</span><span class="kpi-value" id="pEquity">$0</span></div>
+                <div class="kpi-card"><span>Unpaid Split</span><span class="kpi-value text-warning" id="pUnpaid">$0</span></div>
+            </div>
+            <div class="panel">
+                <div style="display:flex; gap:10px;">
+                    <input type="date" id="eDate">
+                    <input type="number" id="eValue" placeholder="Equity">
+                    <button class="btn-primary" onclick="addEntry()">Add Entry</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-capital" class="tab-content">
+            <div class="panel">
+                <input type="number" id="iValue" placeholder="Capital Amount">
+                <button class="btn-primary" onclick="addInvest()">Add Investment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://iofrhbwixhoerudbgsgu.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_j9gURS6MOo-FLuN3MMN2nA_p0DkC5B_';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let db = { entries: [], investments: [], pays: [] };
+
+    async function init() {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: 'Kefayat.399578@gmail.com',
+            password: 'KefayatJAAAAAn'
+        });
+
+        if (error) { document.getElementById('status').innerText = 'Login Failed: ' + error.message; return; }
+        
+        document.getElementById('status').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        // Fetch data logic here (assumes a table 'trading_data' with column 'payload')
+        const { data: userData } = await supabase.from('trading_data').select('payload').single();
+        if (userData) { db = userData.payload; render(); }
+    }
+
+    async function save() {
+        await supabase.from('trading_data').upsert({ id: 'user_data', payload: db });
+        render();
+    }
+
+    function addEntry() {
+        db.entries.push({ date: document.getElementById('eDate').value, val: parseFloat(document.getElementById('eValue').value), split: 20 });
+        save();
+    }
+
+    function addInvest() {
+        db.investments.push({ date: new Date().toISOString().split('T')[0], val: parseFloat(document.getElementById('iValue').value) });
+        save();
+    }
+
+    function render() {
+        let totalInvest = db.investments.reduce((s, i) => s + i.val, 0);
+        document.getElementById('pEquity').innerText = '$' + (db.entries.length > 0 ? db.entries[db.entries.length-1].val : 0).toLocaleString();
+        document.getElementById('pUnpaid').innerText = '$' + (/* Logic for split */ 0).toLocaleString();
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-' + t).classList.add('active');
+    }
+
+    init();
+</script>
+</body>
+</html>
